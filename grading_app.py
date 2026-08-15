@@ -34,6 +34,8 @@ METHOD_DEFINITIONS = {
 CRITERIA = {
     "세트1": {
         "제재": "사회적 촉진과 억제",
+        "탭아이콘": "🔴",
+        "실전제목": "과제 난이도와 사회적 촉진/억제",
         "passage": (
             "기자: 심리학 용어인 '사회적 촉진'과 '사회적 억제'를 일상생활, 특히 우리의 학습에 "
             "어떻게 적용할 수 있을까요?\n"
@@ -49,6 +51,13 @@ CRITERIA = {
         ),
         "문항1": {
             "설명": "표 완성 (㉠~㉢)",
+            "table": {
+                "columns": ["과제의 특성", "효율적인 환경 및 방법", "관련된 심리 현상"],
+                "rows": [
+                    ["㉠", "커피숍, 도서관 등에서 하거나 모임을 만들어 다른 사람들과 함께 함", "사회적 촉진"],
+                    ["지나치게 어렵거나 도전이 필요한 과제", "㉡", "㉢"],
+                ],
+            },
             "blanks": {
                 "㉠": {
                     "label": "과제의 특성 (쉬운 과제 쪽)",
@@ -120,6 +129,8 @@ CRITERIA = {
     },
     "세트2": {
         "제재": "정전기",
+        "탭아이콘": "⚡",
+        "실전제목": "물에 비유한 정전기의 특성",
         "passage": (
             "기자: 겨울철 불청객인 '정전기'란 정확히 무엇인지 설명 부탁드립니다.\n"
             "전문가: 정전기란 전하가 정지 상태로 있어 그 분포가 시간적으로 변화하지 않는 전기, "
@@ -134,6 +145,13 @@ CRITERIA = {
         ),
         "문항1": {
             "설명": "표 완성 (㉠~㉢)",
+            "table": {
+                "columns": ["대상", "물의 상태에 비유", "전하의 상태", "위험성"],
+                "rows": [
+                    ["실생활 전기", "흐르는 물", "전하가 이동함", "감전 등의 위험이 있음"],
+                    ["정전기", "㉠", "㉡", "㉢"],
+                ],
+            },
             "blanks": {
                 "㉠": {
                     "label": "정전기의 물 상태 비유",
@@ -209,6 +227,8 @@ CRITERIA = {
     },
     "세트3": {
         "제재": "인공지능이 그린 그림",
+        "탭아이콘": "🎨",
+        "실전제목": "인간과 인공지능이 만드는 예술의 차이",
         "passage": (
             "기자: 최근 생성형 인공 지능이 그린 그림이 미술계에서 큰 화제를 모으고 있습니다.\n"
             "전문가: 「에드몽 드 벨라미」라는 작품이 대표적입니다.\n"
@@ -224,6 +244,14 @@ CRITERIA = {
         ),
         "문항1": {
             "설명": "표 완성 (㉠~㉢)",
+            "table": {
+                "columns": ["대상", "올림픽 경기에 비유", "예술로 볼 수 있는가 (근거 포함)", "예술로서의 가치"],
+                "rows": [
+                    ["인간의 예술", "인간 선수의 노력과 열정이 담긴 올림픽 경기",
+                     "작가의 경험, 관점, 환경이 담겨 있으므로 예술이다.", "감상자에게 남다른 감동을 줌"],
+                    ["인공지능의 예술", "㉠", "㉡", "㉢"],
+                ],
+            },
             "blanks": {
                 "㉠": {
                     "label": "인공지능 예술의 올림픽 경기 대응 비유",
@@ -337,6 +365,20 @@ def _client():
     return Anthropic(api_key=api_key)
 
 
+def _clean_ai_text(text) -> str:
+    """AI가 생성한 텍스트에서 마크다운 강조 기호(**, __)와 둥근따옴표를 정리해
+    화면에 'AI가 쓴 티'가 나지 않도록 다듬는다."""
+    if not text:
+        return ""
+    text = str(text)
+    text = text.replace("**", "").replace("__", "")
+    text = (
+        text.replace("\u201c", '"').replace("\u201d", '"')
+        .replace("\u2018", "'").replace("\u2019", "'")
+    )
+    return text.strip()
+
+
 def _call_claude_json(system_prompt: str, user_prompt: str) -> dict:
     """Claude를 호출하고 JSON 응답을 파싱해서 반환. 코드펜스가 섞여 와도 방어적으로 파싱."""
     client = _client()
@@ -359,7 +401,7 @@ def _call_claude_json(system_prompt: str, user_prompt: str) -> dict:
 # ----------------------------------------------------------------------------
 _BASE_SYSTEM_PROMPT = """\
 너는 중학교 국어(설명하는 글 쓰기 / 영상 매체 제작) 서논술형 문항의 채점자다.
-다음 5가지 원칙을 반드시 지켜서 채점한다.
+다음 6가지 원칙을 반드시 지켜서 채점한다.
 
 1) [용어 없이도 의미 인정] 채점 기준에 제시된 표현(용어)이 답안에 그대로 없어도,
    요구된 의미(개념)가 문장에 담겨 있으면 정답으로 인정한다. 단어 매칭이 아니라 뜻으로 판단한다.
@@ -368,10 +410,19 @@ _BASE_SYSTEM_PROMPT = """\
    실제로 드러나는지 확인한다. 명칭만 맞고 기능이 다르면 오답(또는 명칭 오류)으로 처리한다.
 3) [오개념 방지] 채점 기준에 제시된 '오개념 패턴'(한 개념의 특성을 반대/다른 개념 설명에
    사용하는 경우)이 답안에 나타나면 반드시 오답으로 처리하고, 어떤 오개념인지 reason에 명시한다.
-4) [결론 방향 확인] 채점 기준에 제시된 '요구되는 결론/방향'이 답안에 명확히 드러나지 않으면
-   설령 부분적으로 옳은 내용이 있어도 만점을 줄 수 없다. 결론이 아예 반대 방향이면 오답으로 처리한다.
-5) [지문 외 배경지식 배제] 답안이 지문에 없는 외부 지식·주장을 추가했다면, 그 부분은 인정하지
+4) [결론 누락 확인] 개념 설명(정의·과정·근거 등)만 있고, 문항 조건이 요구한 결론
+   (행동/처방/판단/최종 대답 등)이 답안에 명확히 드러나지 않으면 설령 앞부분 설명이 옳아도
+   오답 또는 부분점수로 처리한다. "결론이 빠졌다"는 사실을 reason에 반드시 명시한다.
+5) [요소 간 연결 확인] 답안이 두 개의 요소로 이루어져야 하는 경우(예: 시각 요소와 그 효과,
+   질문과 근거, 주장과 근거), 두 요소가 형식상 모두 존재하더라도 내용상 실제로 서로 연결되지
+   않았다면 오답으로 처리한다. 특히 뒤에 오는 요소(효과·근거 등)에는 앞 요소가 왜 그렇게
+   설정되었는지에 대한 구체적 내용이 반드시 담겨 있어야 하며, "좋은 느낌을 준다"처럼 앞 요소와
+   무관하게도 쓸 수 있는 일반적 서술은 연결되지 않은 것으로 본다.
+6) [지문 외 배경지식 배제] 답안이 지문에 없는 외부 지식·주장을 추가했다면, 그 부분은 인정하지
    않는다. 단, 지문 내용을 다른 표현으로 재진술한 것은 배경지식이 아니라 정상적인 답안으로 본다.
+
+reason은 학생이 이해할 수 있는 한국어 평서문으로 쓰고, 마크다운 강조 기호(**, __ 등)나
+곡선 따옴표(“ ” ‘ ’)를 쓰지 않는다. 필요하면 큰따옴표(")나 작은따옴표(')를 직선 형태로만 쓴다.
 
 반드시 순수 JSON만 출력한다. 코드펜스나 설명 문장을 앞뒤에 붙이지 않는다.
 """
@@ -411,6 +462,8 @@ def grade_blank_fill(set_id: str, blank_id: str, blank_criteria: dict, student_a
 }}
 """
     result = _call_claude_json(_BASE_SYSTEM_PROMPT, user_prompt)
+    reason = _clean_ai_text(result["reason"])
+    misconception = _clean_ai_text(result.get("misconception_flag")) or None
     return {
         "total_score": result["score"],
         "max_score": 1,
@@ -420,11 +473,11 @@ def grade_blank_fill(set_id: str, blank_id: str, blank_criteria: dict, student_a
                 "score": result["score"],
                 "max": 1,
                 "verdict": result["verdict"],
-                "reason": result["reason"],
-                "misconception_flag": result.get("misconception_flag"),
+                "reason": reason,
+                "misconception_flag": misconception,
             }
         ],
-        "overall_feedback": result["reason"],
+        "overall_feedback": reason,
     }
 
 
@@ -490,14 +543,14 @@ JSON 형식:
         items.append({
             "name": name, "score": sub["score"], "max": 1,
             "verdict": "정답" if sub["score"] >= 1 else ("부분점수" if sub["score"] > 0 else "오답"),
-            "reason": sub["reason"], "misconception_flag": None,
+            "reason": _clean_ai_text(sub["reason"]), "misconception_flag": None,
         })
     return {
         "total_score": total,
         "max_score": 4,
         "items": items,
-        "overall_feedback": result.get("overall_feedback", ""),
-        "misconception_flag": result.get("misconception_flag"),
+        "overall_feedback": _clean_ai_text(result.get("overall_feedback", "")),
+        "misconception_flag": _clean_ai_text(result.get("misconception_flag")) or None,
     }
 
 
@@ -560,13 +613,13 @@ def grade_media_plan(set_id: str, q_criteria: dict, visual: str, visual_effect: 
         items.append({
             "name": name, "score": sub["score"], "max": max_score,
             "verdict": "정답" if sub["score"] >= max_score else ("부분점수" if sub["score"] > 0 else "오답"),
-            "reason": sub["reason"], "misconception_flag": None,
+            "reason": _clean_ai_text(sub["reason"]), "misconception_flag": None,
         })
     return {
         "total_score": total,
         "max_score": total_points,
         "items": items,
-        "overall_feedback": result.get("overall_feedback", ""),
+        "overall_feedback": _clean_ai_text(result.get("overall_feedback", "")),
     }
 
 
@@ -575,142 +628,366 @@ def grade_media_plan(set_id: str, q_criteria: dict, visual: str, visual_effect: 
 # =============================================================================
 st.set_page_config(page_title="서논술형 자동 채점", page_icon="✍️", layout="wide")
 
+# API 키는 화면에 노출하지 않고 Secrets/환경변수에서만 조용히 읽어온다.
+try:
+    _default_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+except Exception:
+    _default_key = ""
+_default_key = _default_key or os.environ.get("ANTHROPIC_API_KEY", "")
+if _default_key:
+    os.environ["ANTHROPIC_API_KEY"] = _default_key
+
 # ---------------------------------------------------------------------------
-# API 키 설정
+# 전역 상태 초기화
+# ---------------------------------------------------------------------------
+if "results" not in st.session_state:
+    st.session_state["results"] = {}  # key: f"{set_id}|{q_id}" -> 채점 결과 dict
+
+# ---------------------------------------------------------------------------
+# 스타일
+# ---------------------------------------------------------------------------
+st.markdown(
+    """
+    <style>
+    .passage-box {
+        background-color: #eaf2fd; border-radius: 10px; padding: 20px 24px;
+        line-height: 1.7; white-space: pre-line; color: #1a1a2e; margin-bottom: 18px;
+    }
+    .stem-text {
+        font-size: 1.02rem; font-weight: 600; color: #222; margin: 14px 0 8px 0;
+    }
+    .condition-box {
+        background-color: #f2f2f4; border-radius: 8px; padding: 14px 18px;
+        margin-bottom: 14px; font-size: 0.92rem; color: #333; line-height: 1.8;
+    }
+    .field-stem {
+        font-size: 0.92rem; font-weight: 600; color: #444; margin: 10px 0 2px 0;
+    }
+    .criteria-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .criteria-table th {
+        background-color: #f3f0fb; padding: 10px 12px; text-align: center;
+        border: 1px solid #e2ddf3; font-size: 0.92rem;
+    }
+    .criteria-table td {
+        padding: 10px 12px; text-align: center; border: 1px solid #eee; font-size: 0.92rem;
+    }
+    .blank-symbol {
+        display: inline-block; background-color: #6c5ce7; color: white;
+        border-radius: 50%; width: 26px; height: 26px; line-height: 26px;
+        font-weight: 700; font-size: 0.85rem;
+    }
+    .tip-box {
+        background-color: #fff8e1; border-radius: 8px; padding: 14px 16px;
+        font-size: 0.88rem; line-height: 1.6; color: #6b5900; margin-top: 10px;
+    }
+    .review-card {
+        background-color: #fff5f5; border-left: 4px solid #e57373; border-radius: 6px;
+        padding: 12px 16px; margin-bottom: 12px;
+    }
+    .reset-hint { font-size: 0.8rem; color: #888; text-align: right; margin-bottom: 2px; }
+    div[data-testid="stSidebarUserContent"] { padding-top: 0.5rem; }
+    div.stButton > button[kind="secondary"][aria-label="reset-btn"] {}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+SYMBOLS = {"㉠", "㉡", "㉢", "㉣"}
+
+
+def render_reference_table(table_meta: dict):
+    cols = table_meta["columns"]
+    rows = table_meta["rows"]
+    html = ['<table class="criteria-table"><thead><tr>']
+    html += [f"<th>{c}</th>" for c in cols]
+    html.append("</tr></thead><tbody>")
+    for row in rows:
+        html.append("<tr>")
+        for cell in row:
+            if cell in SYMBOLS:
+                html.append(f'<td><span class="blank-symbol">{cell}</span></td>')
+            else:
+                html.append(f"<td>{cell}</td>")
+        html.append("</tr>")
+    html.append("</tbody></table>")
+    st.markdown("".join(html), unsafe_allow_html=True)
+
+
+def render_conditions(conditions):
+    if not conditions:
+        return
+    lines = "".join(f"<div>❗ {c}</div>" for c in conditions)
+    st.markdown(f'<div class="condition-box">{lines}</div>', unsafe_allow_html=True)
+
+
+def field(stem_text: str):
+    """발문을 입력란 바로 위에 붙여 표시."""
+    st.markdown(f'<div class="field-stem">{stem_text}</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# 상단: 초기화 버튼 (오른쪽 끝, 한 줄)
+# ---------------------------------------------------------------------------
+top_l, top_r = st.columns([5, 2])
+with top_r:
+    st.markdown(
+        '<div class="reset-hint">모든 문제를 제출하면 복습할 내용 탭에서 틀린 개념을 확인할 수 있어요. '
+        "답안을 초기화하고 처음부터 다시 풀고 싶다면 다음의 버튼을 누르세요.</div>",
+        unsafe_allow_html=True,
+    )
+    _, btn_col = st.columns([3, 1])
+    with btn_col:
+        if st.button("처음부터 다시 풀기", key="reset_all_btn", type="secondary", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+
+# ---------------------------------------------------------------------------
+# 사이드바 — 개념 길잡이
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.header("⚙️ 설정")
-    # 우선순위: 1) Streamlit Cloud의 st.secrets  2) 로컬 환경변수  3) 사용자 직접 입력
-    # 로컬에 .streamlit/secrets.toml이 없으면 st.secrets 접근 자체가 예외를 던지므로 방어적으로 처리
-    try:
-        default_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-    except Exception:
-        default_key = ""
-    default_key = default_key or os.environ.get("ANTHROPIC_API_KEY", "")
-    key_input = st.text_input(
-        "Anthropic API Key", type="password",
-        value=default_key,
-        help="이 앱은 채점 판단을 위해 Claude API를 호출합니다. "
-             "Streamlit Cloud에 배포한 경우 App settings → Secrets에 키를 등록하면 "
-             "이 입력란은 자동으로 채워집니다. 키는 세션에서만 사용되며 별도 저장되지 않습니다.",
-    )
-    if key_input:
-        os.environ["ANTHROPIC_API_KEY"] = key_input
-    elif not default_key:
-        st.warning("API 키가 설정되지 않았습니다. 직접 입력하거나 Secrets에 등록하세요.")
-    st.caption("키가 없다면 https://console.anthropic.com 에서 발급받으세요.")
-    st.divider()
-    st.caption("채점 기준은 `criteria.py` 파일을 수정해 자유롭게 갱신할 수 있습니다.")
+    st.markdown("### 📖 개념 길잡이")
+    with st.expander("1. 설명 방법 공식", expanded=True):
+        formulas = {
+            "정의": "~란 ~를 말한다.",
+            "예시": "예를 들어 ~",
+            "인과": "~ 때문에 ~한다.",
+            "비교와 대조": "[공통점] ~와 ~의 공통점은 ~이다. / [차이점] ~는 ~이지만, ~는 ~이다.",
+            "분석": "~는 ~와(과) ~로 이루어져 있다.",
+            "분류와 구분": "~는 ~라는 기준에 따라 ~와(과) ~로 나뉜다.",
+        }
+        for name, formula in formulas.items():
+            st.markdown(f"- **{name}**: {formula}")
 
-st.title("✍️ 서논술형 답안 자동 채점")
-st.caption("의미 기반 채점: 용어가 달라도 의미가 통하면 인정 · 오개념/결론 방향은 엄격히 확인")
-
-col_set, col_q = st.columns(2)
-set_id = col_set.selectbox("세트 선택", list(CRITERIA.keys()),
-                            format_func=lambda s: f"{s} ({CRITERIA[s]['제재']})")
-q_id = col_q.selectbox("문항 선택", ["문항1", "문항2", "문항3"])
-
-set_data = CRITERIA[set_id]
-q_data = set_data[q_id]
-
-with st.expander("📖 지문 보기", expanded=False):
-    st.write(set_data["passage"])
-
-st.subheader(f"{set_id} {q_id} — {q_data['설명']}")
+    st.markdown("---")
+    tip_placeholder = st.empty()
 
 # ---------------------------------------------------------------------------
-# 문항1: 빈칸 채우기
+# 상단 탭
 # ---------------------------------------------------------------------------
-if q_id == "문항1":
-    st.info("㉠~㉢ 각 빈칸에 답안을 입력하세요.")
-    answers = {}
-    for blank_id, blank in q_data["blanks"].items():
-        answers[blank_id] = st.text_area(f"{blank_id} — {blank['label']}", height=70, key=f"{set_id}_{q_id}_{blank_id}")
+set_ids = list(CRITERIA.keys())
+tab_labels = [f"{CRITERIA[s]['탭아이콘']} {CRITERIA[s]['제재']}" for s in set_ids] + ["📘 복습할 내용"]
+tabs = st.tabs(tab_labels)
 
-    with st.expander("💡 모범 답안 (선택지별) 미리 보기"):
-        for blank_id, blank in q_data["blanks"].items():
-            st.markdown(f"**{blank_id}**: {blank['model_answer']}")
+for tab, set_id in zip(tabs[:-1], set_ids):
+    with tab:
+        set_data = CRITERIA[set_id]
 
-    if st.button("채점하기 ▶", type="primary", key="grade_q1"):
-        try:
-            total, maxt = 0, 0
+        st.markdown(f"## 💡 [실전 적용] {set_data['실전제목']}")
+        st.markdown(f'<div class="passage-box">{set_data["passage"]}</div>', unsafe_allow_html=True)
+
+        nav_key = f"nav_{set_id}"
+        if nav_key not in st.session_state:
+            st.session_state[nav_key] = "문항1"
+
+        nav_labels = {"문항1": "✏️ 1번 빈칸 채우기", "문항2": "📝 2번 설명문 쓰기", "문항3": "🎬 3번 영상 기획"}
+        nc1, nc2, nc3 = st.columns(3)
+        for col, q_key in zip([nc1, nc2, nc3], ["문항1", "문항2", "문항3"]):
+            btn_type = "primary" if st.session_state[nav_key] == q_key else "secondary"
+            if col.button(nav_labels[q_key], key=f"{set_id}_{q_key}_navbtn",
+                          use_container_width=True, type=btn_type):
+                st.session_state[nav_key] = q_key
+
+        q_id = st.session_state[nav_key]
+        q_data = set_data[q_id]
+        result_key = f"{set_id}|{q_id}"
+        st.divider()
+
+        # ============================= 문항1 =============================
+        if q_id == "문항1":
+            st.markdown(
+                '<div class="stem-text">[서·논술형 1] 윗글을 요약하여 표로 정리하였다. '
+                "빈칸에 들어갈 내용을 찾아 쓰시오.</div>",
+                unsafe_allow_html=True,
+            )
+            render_reference_table(q_data["table"])
+
+            tip_placeholder.markdown(
+                '<div class="tip-box">💡 1번 문제 풀이 팁: 표의 다른 칸(주어진 내용)을 먼저 읽고, '
+                "빈칸에 들어갈 내용을 지문에서 찾아 정리해 쓰세요. 용어가 지문과 똑같지 않아도 "
+                "뜻이 같으면 정답으로 인정됩니다.</div>",
+                unsafe_allow_html=True,
+            )
+
+            answers = {}
             for blank_id, blank in q_data["blanks"].items():
-                with st.spinner(f"{blank_id} 채점 중..."):
-                    result = grade_blank_fill(set_id, blank_id, blank, answers[blank_id])
-                total += result["total_score"]
-                maxt += result["max_score"]
-                item = result["items"][0]
-                icon = {"정답": "✅", "부분점수": "🟡", "오답": "❌"}.get(item["verdict"], "•")
-                st.markdown(f"{icon} **{item['name']}** — {item['verdict']} ({item['score']}/{item['max']}점)")
-                st.caption(item["reason"])
-                if item.get("misconception_flag"):
-                    st.warning(f"⚠️ 오개념 감지: {item['misconception_flag']}")
-            st.success(f"### 총점: {total} / {maxt}")
-        except Exception as e:
-            st.error(f"채점 중 오류: {e}")
+                field(f"{blank_id}")
+                answers[blank_id] = st.text_input(
+                    f"{blank_id}", key=f"{set_id}_{q_id}_{blank_id}", label_visibility="collapsed",
+                )
+
+            with st.expander("💡 모범 답안 미리 보기"):
+                for blank_id, blank in q_data["blanks"].items():
+                    st.markdown(f"**{blank_id}**: {blank['model_answer']}")
+
+            if st.button("채점하기 ▶", type="primary", key=f"{set_id}_grade_q1"):
+                try:
+                    total, maxt, items_all = 0, 0, []
+                    for blank_id, blank in q_data["blanks"].items():
+                        with st.spinner(f"{blank_id} 채점 중..."):
+                            r = grade_blank_fill(set_id, blank_id, blank, answers[blank_id])
+                        total += r["total_score"]
+                        maxt += r["max_score"]
+                        item = r["items"][0]
+                        items_all.append(item)
+                        icon = {"정답": "✅", "부분점수": "🟡", "오답": "❌"}.get(item["verdict"], "•")
+                        st.markdown(f"{icon} **{item['name']}** — {item['verdict']} ({item['score']}/{item['max']}점)")
+                        st.caption(item["reason"])
+                        if item.get("misconception_flag"):
+                            st.warning(f"⚠️ 오개념 감지: {item['misconception_flag']}")
+                    st.success(f"### 총점: {total} / {maxt}")
+
+                    review_points = [
+                        f"{bid}: {b['required_concepts']}" for bid, b in q_data["blanks"].items()
+                    ]
+                    st.session_state["results"][result_key] = {
+                        "세트": set_id, "문항": q_id, "제재": set_data["제재"], "아이콘": set_data["탭아이콘"],
+                        "total_score": total, "max_score": maxt, "items": items_all,
+                        "review_points": review_points,
+                    }
+                except Exception as e:
+                    st.error(f"채점 중 오류: {e}")
+
+        # ============================= 문항2 =============================
+        elif q_id == "문항2":
+            st.markdown(
+                '<div class="stem-text">[서·논술형 2] 서로 다른 설명 방법을 사용하여 '
+                "이어지는 문장 (1), (2)를 작성하시오.</div>",
+                unsafe_allow_html=True,
+            )
+            render_conditions(q_data["conditions"])
+
+            method_options = list(METHOD_DEFINITIONS.keys())
+
+            c1, c2 = st.columns(2)
+            with c1:
+                field("(1)")
+                sentence1 = st.text_area("(1)", height=100, key=f"{set_id}_{q_id}_s1", label_visibility="collapsed")
+                method1 = st.selectbox("사용한 설명 방법", method_options, key=f"{set_id}_{q_id}_m1")
+            with c2:
+                field("(2)")
+                sentence2 = st.text_area("(2)", height=100, key=f"{set_id}_{q_id}_s2", label_visibility="collapsed")
+                method2 = st.selectbox("사용한 설명 방법", method_options, key=f"{set_id}_{q_id}_m2")
+
+            tip_placeholder.markdown(
+                '<div class="tip-box">💡 2번 문제 풀이 팁: 왼쪽 설명 방법 공식을 활용해 문장을 만들고 '
+                "서로 다른 두 방법을 사용하세요. 지문에 없는 내용은 쓰지 않습니다."
+                + (" (1)→(2)가 논리적으로 자연스럽게 이어져야 합니다." if q_data.get("flow_required") else "")
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("💡 모범 답안 (방법별) 미리 보기"):
+                for method, example in q_data["model_answers_by_method"].items():
+                    st.markdown(f"**{method}**: {example}")
+                st.caption(f"※ 목록 외 다른 방법 조합도 조건을 충족하면 정답으로 인정됩니다: {', '.join(method_options)}")
+
+            if st.button("채점하기 ▶", type="primary", key=f"{set_id}_grade_q2"):
+                try:
+                    with st.spinner("채점 중..."):
+                        result = grade_method_writing(set_id, q_data, sentence1, method1, sentence2, method2)
+                    for item in result["items"]:
+                        icon = "✅" if item["score"] >= item["max"] else ("🟡" if item["score"] > 0 else "❌")
+                        st.markdown(f"{icon} **{item['name']}** — {item['score']}/{item['max']}점")
+                        st.caption(item["reason"])
+                    if result.get("misconception_flag"):
+                        st.warning(f"⚠️ 오개념 감지: {result['misconception_flag']}")
+                    st.success(f"### 총점: {result['total_score']} / {result['max_score']}")
+                    st.write("**종합 피드백**:", result["overall_feedback"])
+
+                    st.session_state["results"][result_key] = {
+                        "세트": set_id, "문항": q_id, "제재": set_data["제재"], "아이콘": set_data["탭아이콘"],
+                        "total_score": result["total_score"], "max_score": result["max_score"],
+                        "items": result["items"],
+                        "review_points": [f"요구되는 결론/방향: {q_data['conclusion_requirement']}"],
+                        "overall_feedback": result["overall_feedback"],
+                    }
+                except Exception as e:
+                    st.error(f"채점 중 오류: {e}")
+
+        # ============================= 문항3 =============================
+        elif q_id == "문항3":
+            st.markdown(
+                '<div class="stem-text">[서·논술형 3] 영상 기획안의 시각(Ⓐ)·청각(Ⓑ) 요소와 '
+                "그 효과를 서술하시오.</div>",
+                unsafe_allow_html=True,
+            )
+            conds = list(q_data["conditions"])
+            if q_data["requires_passage_evidence"]:
+                conds = conds + ["효과 서술에는 반드시 윗글의 내용을 근거로 포함해야 함"]
+            render_conditions(conds)
+
+            field("시각 요소 (Ⓐ)")
+            visual = st.text_area("시각 요소", height=80, key=f"{set_id}_{q_id}_visual", label_visibility="collapsed")
+            field("시각 효과 서술")
+            visual_effect = st.text_area("시각 효과", height=80, key=f"{set_id}_{q_id}_veffect", label_visibility="collapsed")
+            field("청각 요소 (Ⓑ)")
+            audio = st.text_area("청각 요소", height=80, key=f"{set_id}_{q_id}_audio", label_visibility="collapsed")
+            field("청각 효과 서술")
+            audio_effect = st.text_area("청각 효과", height=80, key=f"{set_id}_{q_id}_aeffect", label_visibility="collapsed")
+
+            tip_placeholder.markdown(
+                '<div class="tip-box">💡 3번 문제 풀이 팁: 지문의 핵심 개념이 시각/청각 요소에 드러나야 하고, '
+                "효과 서술은 요소와 실제로 연결되어야 합니다."
+                + (" 지문 내용을 반드시 근거로 인용하세요." if q_data["requires_passage_evidence"] else "")
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("💡 모범 답안 예시 (개방형 문항 — 참고용)"):
+                for k, v in q_data["model_answer"].items():
+                    st.markdown(f"**{k}**: {v}")
+
+            if st.button("채점하기 ▶", type="primary", key=f"{set_id}_grade_q3"):
+                try:
+                    with st.spinner("채점 중..."):
+                        result = grade_media_plan(set_id, q_data, visual, visual_effect, audio, audio_effect)
+                    for item in result["items"]:
+                        icon = "✅" if item["score"] >= item["max"] else ("🟡" if item["score"] > 0 else "❌")
+                        st.markdown(f"{icon} **{item['name']}** — {item['score']}/{item['max']}점")
+                        st.caption(item["reason"])
+                    st.success(f"### 총점: {result['total_score']} / {result['max_score']}")
+                    st.write("**종합 피드백**:", result["overall_feedback"])
+
+                    st.session_state["results"][result_key] = {
+                        "세트": set_id, "문항": q_id, "제재": set_data["제재"], "아이콘": set_data["탭아이콘"],
+                        "total_score": result["total_score"], "max_score": result["max_score"],
+                        "items": result["items"],
+                        "review_points": [f"반영해야 할 개념: {', '.join(q_data['required_concept_axes'])}"],
+                        "overall_feedback": result["overall_feedback"],
+                    }
+                except Exception as e:
+                    st.error(f"채점 중 오류: {e}")
 
 # ---------------------------------------------------------------------------
-# 문항2: 설명 방법 이어쓰기
+# 복습할 내용 탭 — 조건 미충족 문제만 표시
 # ---------------------------------------------------------------------------
-elif q_id == "문항2":
-    st.info("서로 다른 설명 방법으로 (1), (2) 문장을 작성하고, 사용한 방법을 선택하세요.")
-    method_options = list(METHOD_DEFINITIONS.keys())
+with tabs[-1]:
+    st.markdown("## 📘 복습할 내용")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        sentence1 = st.text_area("(1) 문장", height=100, key=f"{set_id}_{q_id}_s1")
-        method1 = st.selectbox("(1)에 사용한 설명 방법", method_options, key=f"{set_id}_{q_id}_m1")
-    with c2:
-        sentence2 = st.text_area("(2) 문장", height=100, key=f"{set_id}_{q_id}_s2")
-        method2 = st.selectbox("(2)에 사용한 설명 방법", method_options, key=f"{set_id}_{q_id}_m2")
+    failed = {
+        k: v for k, v in st.session_state["results"].items()
+        if v["total_score"] < v["max_score"]
+    }
 
-    with st.expander("💡 모범 답안 (방법별 선택지) 미리 보기"):
-        for method, example in q_data["model_answers_by_method"].items():
-            st.markdown(f"**{method}**: {example}")
-        st.caption(f"※ 이 목록 외 다른 방법 조합도 조건을 충족하면 정답으로 인정됩니다: "
-                   f"{', '.join(method_options)}")
+    if not st.session_state["results"]:
+        st.info("아직 제출한 문항이 없습니다. 문제를 풀고 채점하면 부족한 부분이 여기에 표시됩니다.")
+    elif not failed:
+        st.success("제출한 문항을 모두 조건에 맞게 완성했습니다. 복습할 내용이 없습니다. 🎉")
+    else:
+        for k, v in failed.items():
+            st.markdown(f"### {v['아이콘']} {v['제재']} — {v['문항']} ({v['total_score']}/{v['max_score']}점)")
+            st.markdown("**핵심 복습 포인트**")
+            for rp in v["review_points"]:
+                st.markdown(f"- {rp}")
+            st.markdown("**내 답안에서 부족했던 부분**")
+            for item in v["items"]:
+                if item["score"] < item["max"]:
+                    st.markdown(
+                        f'<div class="review-card"><b>{item["name"]}</b><br>{item["reason"]}</div>',
+                        unsafe_allow_html=True,
+                    )
+            st.divider()
 
-    if st.button("채점하기 ▶", type="primary", key="grade_q2"):
-        try:
-            with st.spinner("채점 중..."):
-                result = grade_method_writing(set_id, q_data, sentence1, method1, sentence2, method2)
-            for item in result["items"]:
-                icon = "✅" if item["score"] >= item["max"] else ("🟡" if item["score"] > 0 else "❌")
-                st.markdown(f"{icon} **{item['name']}** — {item['score']}/{item['max']}점")
-                st.caption(item["reason"])
-            if result.get("misconception_flag"):
-                st.warning(f"⚠️ 오개념 감지: {result['misconception_flag']}")
-            st.success(f"### 총점: {result['total_score']} / {result['max_score']}")
-            st.write("**종합 피드백**:", result["overall_feedback"])
-        except Exception as e:
-            st.error(f"채점 중 오류: {e}")
-
-# ---------------------------------------------------------------------------
-# 문항3: 영상 기획안
-# ---------------------------------------------------------------------------
-elif q_id == "문항3":
-    st.info("시각 요소(Ⓐ)·청각 요소(Ⓑ)와 각각의 효과를 서술하세요.")
-    if q_data["requires_passage_evidence"]:
-        st.warning("이 문항은 효과 서술에 **반드시 지문 내용을 근거로 인용**해야 합니다.")
-
-    visual = st.text_area("시각 요소 (Ⓐ)", height=80, key=f"{set_id}_{q_id}_visual")
-    visual_effect = st.text_area("시각 효과 서술", height=80, key=f"{set_id}_{q_id}_veffect")
-    audio = st.text_area("청각 요소 (Ⓑ)", height=80, key=f"{set_id}_{q_id}_audio")
-    audio_effect = st.text_area("청각 효과 서술", height=80, key=f"{set_id}_{q_id}_aeffect")
-
-    with st.expander("💡 모범 답안 예시 (개방형 문항 — 참고용)"):
-        for k, v in q_data["model_answer"].items():
-            st.markdown(f"**{k}**: {v}")
-
-    if st.button("채점하기 ▶", type="primary", key="grade_q3"):
-        try:
-            with st.spinner("채점 중..."):
-                result = grade_media_plan(set_id, q_data, visual, visual_effect, audio, audio_effect)
-            for item in result["items"]:
-                icon = "✅" if item["score"] >= item["max"] else ("🟡" if item["score"] > 0 else "❌")
-                st.markdown(f"{icon} **{item['name']}** — {item['score']}/{item['max']}점")
-                st.caption(item["reason"])
-            st.success(f"### 총점: {result['total_score']} / {result['max_score']}")
-            st.write("**종합 피드백**:", result["overall_feedback"])
-        except Exception as e:
-            st.error(f"채점 중 오류: {e}")
+    st.markdown("### 설명 방법 6가지 공식 (전체 복습)")
+    for name, definition in METHOD_DEFINITIONS.items():
+        st.markdown(f"- **{name}**: {definition}")
